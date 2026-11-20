@@ -166,6 +166,7 @@ const INITIAL_SYSTEM = [
 const DRIFT_SYSTEM = [
 	"You maintain the display name of a coding-agent session.",
 	"Input is JSON data with the current name and a recent conversation excerpt.",
+	"Base your judgment on the session's primary sustained goal, not incidental side remarks.",
 	"If the session's main goal has clearly shifted or the current name is now misleading,",
 	"output a better name (same language, 3-8 words, no quotes, no date, no ending punctuation).",
 	"If the current name is still accurate, output exactly: KEEP",
