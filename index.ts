@@ -16,7 +16,7 @@
  *    "maxTitleChars": 60 }
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -38,6 +38,11 @@ const DEFAULTS: Config = {
 
 function agentDir(): string {
 	return process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+}
+
+// Black-box recorder: every naming decision is logged next to the extension.
+function logLine(msg: string): void {
+	try { appendFileSync(join(agentDir(), "extensions", "anchor-name.log"), `${new Date().toISOString()} ${msg}\n`); } catch { /* logging must never break naming */ }
 }
 
 // 记住本扩展起过的名字：{ sessionId: name }。恢复会话时名字若与记录一致，
@@ -224,12 +229,15 @@ export default function (pi: ExtensionAPI) {
 		const existing = pi.getSessionName();
 		if (!existing) {
 			manualLock = false; // 全新会话，归我们管
+			logLine(`session_start ${sessionId.slice(0, 8)} unnamed -> will name after first settle`);
 		} else if (sessionId && state[sessionId] === existing) {
 			manualLock = false; // 名字还是我们上次起的，继续维护
 			autoName = existing;
 			lastNamedTurn = 0;
+			logLine(`session_start ${sessionId.slice(0, 8)} maintained "${existing}"`);
 		} else {
 			manualLock = true; // 用户手动命名/改过名，或 --name 启动 → 永久让路
+			logLine(`session_start ${sessionId.slice(0, 8)} existing "${existing}" not ours -> manual lock`);
 		}
 	});
 
@@ -257,6 +265,7 @@ export default function (pi: ExtensionAPI) {
 				title = datePrefix(ctx) + stripLeadingDate(title);
 				claimName(title);
 				lastNamedTurn = settledTurns;
+				logLine(`initial-name turn=${settledTurns} "${title}"`);
 				if (ctx.hasUI) ctx.ui.notify(`session named: ${title}`, "info");
 				return;
 			}
@@ -268,18 +277,25 @@ export default function (pi: ExtensionAPI) {
 			const excerpt = buildExcerpt(ctx);
 			if (!excerpt) return;
 			const raw = await askModel(ctx, DRIFT_SYSTEM, JSON.stringify({ currentName: autoName, recentConversation: excerpt }));
-			if (!raw) return;
+			if (!raw) { logLine(`drift-check turn=${settledTurns} model returned nothing`); return; }
 			const answer = raw.trim();
-			if (/^keep\b/i.test(answer) || answer === "KEEP" || answer === "保持") return;
+			if (/^keep\b/i.test(answer) || answer === "KEEP" || answer === "保持") {
+				logLine(`drift-check turn=${settledTurns} KEEP ("${autoName}")`);
+				return;
+			}
 			let title = normalizeTitle(answer, config.maxTitleChars);
-			if (!title) return;
+			if (!title) { logLine(`drift-check turn=${settledTurns} unusable answer "${answer.slice(0, 80)}"`); return; }
 			title = datePrefix(ctx) + stripLeadingDate(title);
-			if (title === autoName) return;
-			if (pi.getSessionName() !== autoName) { manualLock = true; return; }
+			if (title === autoName) { logLine(`drift-check turn=${settledTurns} same name, no-op`); return; }
+			if (pi.getSessionName() !== autoName) { manualLock = true; logLine(`drift-check turn=${settledTurns} name changed externally -> manual lock`); return; }
+			const oldName = autoName;
 			claimName(title);
+			logLine(`drift-rename turn=${settledTurns} "${oldName}" -> "${title}" (model said: ${answer.slice(0, 80)})`);
 			if (ctx.hasUI) ctx.ui.notify(`session renamed: ${title}`, "info");
 		} catch (error: unknown) {
-			warn(ctx, error instanceof Error ? error.message : "命名调用失败");
+			const msg = error instanceof Error ? error.message : "naming call failed";
+			logLine(`error: ${msg}`);
+			warn(ctx, msg);
 		} finally {
 			busy = false;
 		}
