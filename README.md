@@ -63,6 +63,7 @@ Create `~/.pi/agent/extensions/anchor-name.json` — no file means all defaults.
   "datePrefix": true,
   "workerPrefix": true,
   "log": true,
+  "language": "auto",
   "recheckEveryTurns": 5,
   "model": "provider/modelId",
   "maxTitleChars": 60
@@ -76,6 +77,7 @@ Create `~/.pi/agent/extensions/anchor-name.json` — no file means all defaults.
 | `datePrefix` | `true` | `YYMMDD-` time-anchor prefix on auto names |
 | `workerPrefix` | `true` | Non-interactive runs (subagent workers, one-shot `-p`) get a `W-` marker so they never blend into your main session list |
 | `log` | `true` | Black-box log (`anchor-name.log`, self-trimming, hard cap 64 KB) |
+| `language` | `"auto"` | `auto` = follow the user's own language; or force one, e.g. `"Chinese"`, `"English"` — hard instruction, immune to English tool/file names in the excerpt |
 | `recheckEveryTurns` | `5` | Settled turns between drift checks |
 | `model` | *(current model)* | Dedicated naming model, e.g. a small local one |
 | `maxTitleChars` | `60` | Title length cap |
