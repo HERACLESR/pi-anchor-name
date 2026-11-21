@@ -294,6 +294,21 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("agent_settled", async (_event, ctx) => {
 		if (!config.enabled || busy || manualLock) return;
+		if (!sessionId) {
+			// Hot-reload fallback: this instance loaded after session_start already fired.
+			// Re-adopt the session instead of blindly manual-locking it.
+			sessionId = ctx.sessionManager.getSessionId() ?? "";
+			state = loadState();
+			const existing = pi.getSessionName();
+			if (existing && sessionId && state[sessionId] === existing) {
+				autoName = existing;
+				lastNamedTurn = 0;
+				logLine(`adopt-after-reload ${sessionId.slice(0, 8)} "${existing}"`);
+			} else if (existing) {
+				manualLock = true; // name exists but is not ours -> stay out of the way
+				return;
+			}
+		}
 		settledTurns++;
 		busy = true;
 		try {
@@ -348,9 +363,21 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("rename", {
-		description: "Rename session: /rename <text> sets a name; /rename (empty) regenerates from conversation and locks",
+		description: "Rename session: /rename <text> sets a name; /rename (empty) regenerates from conversation and locks; /rename adopt re-takes management of the current name",
 		handler: async (args, ctx) => {
 			const manual = args.trim();
+			if (manual.toLowerCase() === "adopt") {
+				const current = pi.getSessionName();
+				if (!current || !sessionId) { ctx.ui.notify("anchor-name: nothing to adopt", "warning"); return; }
+				autoName = current;
+				manualLock = false;
+				lastNamedTurn = settledTurns;
+				state[sessionId] = current;
+				saveState(state);
+				logLine(`adopt-manual ${sessionId.slice(0, 8)} "${current}" -> drift management resumed`);
+				ctx.ui.notify(`anchor-name: adopted "${current}", drift management resumed`, "info");
+				return;
+			}
 			if (manual) {
 				pi.setSessionName(manual);
 				if (sessionId) delete state[sessionId];

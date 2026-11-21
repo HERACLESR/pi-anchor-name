@@ -1,12 +1,20 @@
 {
   "name": "pi-anchor-name",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Drift-aware automatic session naming for the pi coding agent. Names are anchors, not labels.",
-  "keywords": ["pi-package", "pi", "pi-extension", "session", "naming"],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "session",
+    "naming"
+  ],
   "license": "MIT",
   "type": "module",
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
