@@ -16,7 +16,7 @@
  *    "maxTitleChars": 60 }
  */
 
-import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -41,8 +41,21 @@ function agentDir(): string {
 }
 
 // Black-box recorder: every naming decision is logged next to the extension.
+// Self-trimming: when the log exceeds 64 KB it keeps only the newest ~32 KB.
 function logLine(msg: string): void {
-	try { appendFileSync(join(agentDir(), "extensions", "anchor-name.log"), `${new Date().toISOString()} ${msg}\n`); } catch { /* logging must never break naming */ }
+	try {
+		const logPath = join(agentDir(), "extensions", "anchor-name.log");
+		try {
+			const size = statSync(logPath).size;
+			if (size > 64 * 1024) {
+				const buf = readFileSync(logPath, "utf8");
+				const tail = buf.slice(buf.length - 32 * 1024);
+				const firstNl = tail.indexOf("\n");
+				writeFileSync(logPath, firstNl === -1 ? tail : tail.slice(firstNl + 1));
+			}
+		} catch { /* no log yet */ }
+		appendFileSync(logPath, `${new Date().toISOString()} ${msg}\n`);
+	} catch { /* logging must never break naming */ }
 }
 
 // 记住本扩展起过的名字：{ sessionId: name }。恢复会话时名字若与记录一致，
