@@ -1,6 +1,6 @@
 {
   "name": "pi-anchor-name",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Drift-aware automatic session naming for the pi coding agent. Names are anchors, not labels.",
   "keywords": [
     "pi-package",

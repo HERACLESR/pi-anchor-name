@@ -29,7 +29,7 @@ Sessions without a name show your first message in the selector. That first mess
 
 1. **First naming** — after the first agent run fully settles (retries, compaction and queued messages included), an unnamed session gets a name generated from what actually happened, not just the opening line.
 2. **Drift check** — every `recheckEveryTurns` settled turns (default 5), the naming model is asked one question: *has the session's goal clearly moved?* If yes → new name. If no → `KEEP`, silence. Names are stable by default.
-3. **Manual names are sacred** — any name this extension did not set (`/name`, `--name`, or a manual `/rename`) is permanently off-limits, remembered across restarts via a tiny local state file.
+3. **Manual names are sacred** — any name this extension did not set (`/name`, `--name`, or a manual `/rename`) is permanently off-limits, remembered across restarts via a tiny local state file. Exception: a name carrying this extension's own title format (`YYMMDD-` / `W-YYMMDD-`) is auto-adopted even if state was lost, so auto-management never dies by accident.
 4. **Time anchor** — auto names are prefixed `YYMMDD-` (the session's creation date), so the `/resume` list sorts chronologically and the prefix never changes, even after later renames.
 
 ### Install
@@ -50,6 +50,7 @@ pi -e git:github.com/HERACLESR/pi-anchor-name
 |---|---|
 | `/rename` | Regenerate a name from the full conversation, then lock (auto-naming steps back) |
 | `/rename <text>` | Set the name directly, then lock |
+| `/rename adopt` | Escape hatch: re-take auto-management of the current name (rarely needed — names in our own format are adopted automatically) |
 | `/name <text>` | pi's built-in rename — also respected forever |
 
 ### Configuration (optional)

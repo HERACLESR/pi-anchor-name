@@ -281,6 +281,14 @@ export default function (pi: ExtensionAPI) {
 			autoName = existing;
 			lastNamedTurn = 0;
 			logLine(`session_start ${sessionId.slice(0, 8)} maintained "${existing}"`);
+		} else if (/^(W-)?\d{6}-/.test(existing)) {
+			// Name carries our own title format (state lost, or an older version
+			// named it): treat as ours instead of locking forever.
+			manualLock = false;
+			autoName = existing;
+			lastNamedTurn = 0;
+			if (sessionId) { state[sessionId] = existing; saveState(state); }
+			logLine(`session_start ${sessionId.slice(0, 8)} existing "${existing}" matches our format -> adopted`);
 		} else {
 			manualLock = true; // 用户手动命名/改过名，或 --name 启动 → 永久让路
 			logLine(`session_start ${sessionId.slice(0, 8)} existing "${existing}" not ours -> manual lock`);
@@ -304,6 +312,11 @@ export default function (pi: ExtensionAPI) {
 				autoName = existing;
 				lastNamedTurn = 0;
 				logLine(`adopt-after-reload ${sessionId.slice(0, 8)} "${existing}"`);
+			} else if (existing && /^(W-)?\d{6}-/.test(existing)) {
+				autoName = existing;
+				lastNamedTurn = 0;
+				if (sessionId) { state[sessionId] = existing; saveState(state); }
+				logLine(`adopt-by-format ${sessionId.slice(0, 8)} "${existing}"`);
 			} else if (existing) {
 				manualLock = true; // name exists but is not ours -> stay out of the way
 				return;
