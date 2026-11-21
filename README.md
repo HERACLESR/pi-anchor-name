@@ -50,7 +50,7 @@ pi -e git:github.com/HERACLESR/pi-anchor-name
 |---|---|
 | `/rename` | Regenerate a name from the full conversation, then lock (auto-naming steps back) |
 | `/rename <text>` | Set the name directly, then lock |
-| `/rename adopt` | Escape hatch: re-take auto-management of the current name (rarely needed — names in our own format are adopted automatically) |
+| `/rename adopt` | Escape hatch: re-take auto-management of the current name. Keywords `auto` / `接管` / `认领` work too (rarely needed — names in our own format are adopted automatically) |
 | `/name <text>` | pi's built-in rename — also respected forever |
 
 ### Configuration (optional)

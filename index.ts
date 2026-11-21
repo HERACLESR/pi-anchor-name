@@ -376,10 +376,10 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("rename", {
-		description: "Rename session: /rename <text> sets a name; /rename (empty) regenerates from conversation and locks; /rename adopt re-takes management of the current name",
+		description: "Rename session: /rename <text> sets a name; /rename (empty) regenerates from conversation and locks; /rename auto (or 接管) re-takes auto-management of the current name",
 		handler: async (args, ctx) => {
 			const manual = args.trim();
-			if (manual.toLowerCase() === "adopt") {
+			if (/^(adopt|auto|接管|认领|收编)$/i.test(manual)) {
 				const current = pi.getSessionName();
 				if (!current || !sessionId) { ctx.ui.notify("anchor-name: nothing to adopt", "warning"); return; }
 				autoName = current;
