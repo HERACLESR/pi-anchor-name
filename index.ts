@@ -24,6 +24,9 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 interface Config {
 	enabled: boolean;
 	continuous: boolean;
+	datePrefix: boolean;
+	workerPrefix: boolean;
+	log: boolean;
 	recheckEveryTurns: number;
 	model?: string; // "provider/modelId"
 	maxTitleChars: number;
@@ -32,6 +35,9 @@ interface Config {
 const DEFAULTS: Config = {
 	enabled: true,
 	continuous: true,
+	datePrefix: true,
+	workerPrefix: true,
+	log: true,
 	recheckEveryTurns: 5,
 	maxTitleChars: 60,
 };
@@ -43,6 +49,7 @@ function agentDir(): string {
 // Black-box recorder: every naming decision is logged next to the extension.
 // Self-trimming: when the log exceeds 64 KB it keeps only the newest ~32 KB.
 function logLine(msg: string): void {
+	if (!config.log) return;
 	try {
 		const logPath = join(agentDir(), "extensions", "anchor-name.log");
 		try {
@@ -81,6 +88,9 @@ function loadConfig(): Config {
 		return {
 			enabled: raw.enabled !== false,
 			continuous: raw.continuous !== false,
+			datePrefix: raw.datePrefix !== false,
+			workerPrefix: raw.workerPrefix !== false,
+			log: raw.log !== false,
 			recheckEveryTurns: Number.isFinite(raw.recheckEveryTurns) && raw.recheckEveryTurns >= 1
 				? Math.floor(raw.recheckEveryTurns) : DEFAULTS.recheckEveryTurns,
 			model: typeof raw.model === "string" && raw.model.includes("/") ? raw.model : undefined,
@@ -145,6 +155,15 @@ function stripLeadingDate(title: string): string {
 		.replace(/^\d{6}[-｜|]?\s*/, "")
 		.replace(/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}[-｜|]?\s*/, "")
 		.trim();
+}
+
+// Non-interactive runs (subagent workers, one-shot -p) have no UI; mark their
+// names with a leading W- so they never blend into the main session list.
+// Both the W- marker and the date prefix are user-toggleable via config.
+function makeTitle(ctx: ExtensionContext, title: string): string {
+	const worker = config.workerPrefix && !ctx.hasUI ? "W-" : "";
+	const date = config.datePrefix ? datePrefix(ctx) : "";
+	return `${worker}${date}${stripLeadingDate(title)}`;
 }
 
 // ---------- title normalization ----------
@@ -275,7 +294,7 @@ export default function (pi: ExtensionAPI) {
 				let title = raw ? normalizeTitle(raw, config.maxTitleChars) : undefined;
 				if (!title) return;
 				if (pi.getSessionName()) return; // 期间用户抢先命名了
-				title = datePrefix(ctx) + stripLeadingDate(title);
+				title = makeTitle(ctx, title);
 				claimName(title);
 				lastNamedTurn = settledTurns;
 				logLine(`initial-name turn=${settledTurns} "${title}"`);
@@ -298,7 +317,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			let title = normalizeTitle(answer, config.maxTitleChars);
 			if (!title) { logLine(`drift-check turn=${settledTurns} unusable answer "${answer.slice(0, 80)}"`); return; }
-			title = datePrefix(ctx) + stripLeadingDate(title);
+			title = makeTitle(ctx, title);
 			if (title === autoName) { logLine(`drift-check turn=${settledTurns} same name, no-op`); return; }
 			if (pi.getSessionName() !== autoName) { manualLock = true; logLine(`drift-check turn=${settledTurns} name changed externally -> manual lock`); return; }
 			const oldName = autoName;
@@ -332,7 +351,7 @@ export default function (pi: ExtensionAPI) {
 				const raw = await askModel(ctx, INITIAL_SYSTEM, JSON.stringify({ conversation: excerpt }));
 				let title = raw ? normalizeTitle(raw, config.maxTitleChars) : undefined;
 				if (!title) { ctx.ui.notify("anchor-name: generation failed, name unchanged", "warning"); return; }
-				title = datePrefix(ctx) + stripLeadingDate(title);
+				title = makeTitle(ctx, title);
 				pi.setSessionName(title);
 				if (sessionId) delete state[sessionId];
 				manualLock = true;

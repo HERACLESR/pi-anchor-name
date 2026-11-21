@@ -54,12 +54,15 @@ pi -e git:github.com/HERACLESR/pi-anchor-name
 
 ### Configuration (optional)
 
-Create `~/.pi/agent/extensions/anchor-name.json` — no file means all defaults:
+Create `~/.pi/agent/extensions/anchor-name.json` — no file means all defaults. Every behavior has its own switch:
 
 ```json
 {
   "enabled": true,
   "continuous": true,
+  "datePrefix": true,
+  "workerPrefix": true,
+  "log": true,
   "recheckEveryTurns": 5,
   "model": "provider/modelId",
   "maxTitleChars": 60
@@ -69,7 +72,10 @@ Create `~/.pi/agent/extensions/anchor-name.json` — no file means all defaults:
 | Key | Default | Meaning |
 |---|---|---|
 | `enabled` | `true` | Master switch |
-| `continuous` | `true` | Enable drift checks after the first naming |
+| `continuous` | `true` | Drift checks after the first naming |
+| `datePrefix` | `true` | `YYMMDD-` time-anchor prefix on auto names |
+| `workerPrefix` | `true` | Non-interactive runs (subagent workers, one-shot `-p`) get a `W-` marker so they never blend into your main session list |
+| `log` | `true` | Black-box log (`anchor-name.log`, self-trimming, hard cap 64 KB) |
 | `recheckEveryTurns` | `5` | Settled turns between drift checks |
 | `model` | *(current model)* | Dedicated naming model, e.g. a small local one |
 | `maxTitleChars` | `60` | Title length cap |
@@ -77,6 +83,10 @@ Create `~/.pi/agent/extensions/anchor-name.json` — no file means all defaults:
 ### Privacy
 
 The only data that ever leaves your machine is a short excerpt (last few messages, truncated) sent to **the model provider you already use**, via pi's own model registry and auth. No telemetry, no network of its own, no credentials touched. Read the single file — it is the whole product.
+
+### Cost
+
+Naming is nearly free: the excerpt is capped at ~6 KB and the answer at a handful of words. On a local model a naming call completes in well under a second — so light it is easy to miss on a server dashboard. No background timers, no polling: the extension only wakes at turn boundaries.
 
 ### Uninstall
 
